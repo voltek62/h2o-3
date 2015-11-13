@@ -3,9 +3,7 @@ package hex.tree.drf;
 import hex.tree.SharedTreeModel;
 import water.Key;
 import water.util.MathUtils;
-import water.util.SBPrintStream;
-
-import java.util.Arrays;
+import water.codegen.SBPrintStream;
 
 public class DRFModel extends SharedTreeModel<DRFModel,DRFModel.DRFParameters,DRFModel.DRFOutput> {
 
