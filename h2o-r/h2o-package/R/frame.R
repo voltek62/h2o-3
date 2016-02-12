@@ -2893,6 +2893,7 @@ h2o.substr <- h2o.substring
 #'
 #' @param x   The column whose strings should be lstrip-ed.
 #' @param set string of characters to be removed
+#' @param x The column whose strings should be lstrip-ed.
 #' @export
 h2o.lstrip <- function(x, set = " ") .newExpr("lstrip", x, .quote(set))
 
@@ -2905,5 +2906,6 @@ h2o.lstrip <- function(x, set = " ") .newExpr("lstrip", x, .quote(set))
 #'
 #' @param x   The column whose strings should be rstrip-ed.
 #' @param set string of characters to be removed
+#' @param x The column whose strings should be rstrip-ed.
 #' @export
 h2o.rstrip <- function(x, set = " ") .newExpr("rstrip", x, .quote(set))
