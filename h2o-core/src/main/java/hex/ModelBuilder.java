@@ -747,12 +747,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
       _train.remove(_parms._ignored_columns);
       if( expensive ) Log.info("Dropping ignored columns: "+Arrays.toString(_parms._ignored_columns));
     }
-    // Rebalance train and valid datasets
-    if (expensive && error_count() == 0) {
-      _train = rebalance(_train, false, _result + ".temporary.train");
-      _valid = rebalance(_valid, false, _result + ".temporary.valid");
-    }
-    
+
     // Drop all non-numeric columns (e.g., String and UUID).  No current algo
     // can use them, and otherwise all algos will then be forced to remove
     // them.  Text algos (grep, word2vec) take raw text columns - which are
@@ -761,6 +756,12 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
     // Check that at least some columns are not-constant and not-all-NAs
     if( _train.numCols() == 0 )
       error("_train","There are no usable columns to generate model");
+
+    // Rebalance train and valid datasets
+    if (expensive && error_count() == 0) {
+      _train = rebalance(_train, false, _result + ".temporary.train");
+      _valid = rebalance(_valid, false, _result + ".temporary.valid");
+    }
 
     if(isSupervised()) {
       if(_response != null) {
