@@ -949,7 +949,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
     }
   }
 
-  transient public HashSet<String> _removedCols = new HashSet<>();
+  protected transient HashSet<String> _removedCols = new HashSet<>();
   abstract class FilterCols {
     final int _specialVecs; // special vecs to skip at the end
     public FilterCols(int n) {_specialVecs = n;}

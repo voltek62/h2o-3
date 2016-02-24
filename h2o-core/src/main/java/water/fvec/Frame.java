@@ -727,6 +727,7 @@ public class Frame extends Lockable<Frame> {
     _vecs = rem;
     _names= names;
     _keys = keys;
+    _col0 = null;
     assert l == rem.length && k == idxs.length;
     return res;
   }

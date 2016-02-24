@@ -76,4 +76,24 @@ public class Futures {
       throw Log.throwErr(new RuntimeException(e.getCause()));
     } catch( InterruptedException e ) { throw Log.throwErr(e); }
   }
+
+  /** Block until all pending futures have completed or canceled, ignoring errors.  */
+  public final void blockForPending(boolean ignoreErrors) {
+    if (!ignoreErrors) blockForPending();
+    else
+      try {
+        // Block until the last Future finishes.
+        while( true ) {
+          Future f;
+          synchronized(this) {
+            if( _pending_cnt == 0 ) return;
+            f = _pending[--_pending_cnt];
+          }
+          try { f.get(); }
+          catch( CancellationException e ) { /*Ignore canceled tasks*/ }
+        }
+      } catch( Throwable e ) {
+        Log.err(e);
+      }
+  }
 }

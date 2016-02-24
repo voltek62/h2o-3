@@ -254,6 +254,7 @@ final class RollupStats extends Iced {
     Roll( H2OCountedCompleter cmp, Key rskey ) { super(cmp); _rskey=rskey; }
     @Override public void map( Chunk c ) { _rs = new RollupStats(0).map(c); }
     @Override public void reduce( Roll roll ) { _rs.reduce(roll._rs); }
+    @Override protected boolean computeRollupsUpfront() { return false; }
     @Override public void postGlobal() {
       if( _rs == null )
         _rs = new RollupStats(0);

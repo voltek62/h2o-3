@@ -486,6 +486,8 @@ public abstract class MRTask<T extends MRTask<T>> extends DTask<T> implements Fo
     H2O.submitTask(this);
   }
 
+  protected boolean computeRollupsUpfront() { return true; }
+
   /*
    * Set top-level fields and fire off remote work (if there is any to do) to 2 selected
    * child JVM/nodes. Setup for local work: fire off any global work to cloud neighbors; do all
@@ -495,6 +497,11 @@ public abstract class MRTask<T extends MRTask<T>> extends DTask<T> implements Fo
     if(_profile != null)
       (_profile = new MRProfile(this))._localstart = System.currentTimeMillis();
     // Make a blockable Futures for both internal and user work to block on.
+    if (_topGlobal && computeRollupsUpfront() && _fr!=null) {
+      Futures fs = new Futures();
+      for (Vec v : _fr.vecs()) v.startRollupStats(fs);
+      fs.blockForPending(true);
+    }
     _fs = new Futures();
     _topLocal = true;
     // Check for global vs local work
