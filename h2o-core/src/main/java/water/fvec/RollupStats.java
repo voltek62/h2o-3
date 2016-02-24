@@ -329,6 +329,9 @@ final class RollupStats extends Iced {
     final double _base, _stride; // Inputs
     final int _nbins;            // Inputs
     long[] _bins;                // Outputs
+
+    @Override public boolean computeRollupsUpfront(){return false;}
+
     Histo( H2OCountedCompleter cmp, RollupStats rs, int nbins ) { super(cmp);_base = rs.h_base(); _stride = rs.h_stride(nbins); _nbins = nbins; }
     @Override public void map( Chunk c ) {
       _bins = new long[_nbins];
