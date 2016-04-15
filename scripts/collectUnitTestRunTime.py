@@ -67,11 +67,16 @@ def run_commands(command, number_to_run, temp_file):
         with open(temp_file, 'r') as thefile:   # go into tempfile and grab test run info
             for each_line in thefile:
 
-                if ('PASS' in each_line):
-                    temp_string = each_line.split()
-                    test_time = temp_string[2]
-                    result_dict["run_time_secs"].append(float(test_time[:-1]))
-                    break
+                temp_string = each_line.split()
+                if len(temp_string) > 0:
+                    if (temp_string[0] == 'PASS'):
+                        test_time = temp_string[2]
+                        try:
+                            runtime = test_time[:-1]
+                            result_dict["run_time_secs"].append(float(runtime))
+                        except:
+                            print("Cannot convert run time.  It is {0}\n".format(runtime))
+                        break
 
     return result_dict
 
