@@ -105,7 +105,7 @@ def write_result_summary(result_dict, directory_path, is_new_run):
                 temp_dict = json.load(test_file)
                 run_time = temp_dict["run_time_secs"]
 
-        if ("run_time_secs" in dict_keys) and (len(run_time) > 0) :
+        if ("run_time_secs" in dict_keys) and (len(run_time) > 0):
             run_time.extend(result_dict["run_time_secs"])
             result_dict["max_run_time_secs"] = max(run_time)
             result_dict["min_run_time_secs"] = min(run_time)
