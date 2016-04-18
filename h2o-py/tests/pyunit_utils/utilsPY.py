@@ -2277,7 +2277,6 @@ def evaluate_metrics_stopping(model_list, metric_name, bigger_is_better, search_
 
     metric_list = []    # store metric of optimization
     stop_now = False
-    lastBeforeK = 0
 
     # provide metric list sorted by time.  Oldest model appear first.
     metric_list_time_ordered = sort_model_by_time(model_list, metric_name)
@@ -2285,9 +2284,8 @@ def evaluate_metrics_stopping(model_list, metric_name, bigger_is_better, search_
     for metric_value in metric_list_time_ordered:
         metric_list.append(metric_value)
 
-        if len(metric_list) >= min_list_len:     # start early stopping evaluation now
-            [stop_now, lastBeforeK] = evaluate_early_stopping(metric_list, stop_round, tolerance, bigger_is_better,
-                                                            lastBeforeK)
+        if len(metric_list) > min_list_len:     # start early stopping evaluation now
+            stop_now = evaluate_early_stopping(metric_list, stop_round, tolerance, bigger_is_better)
 
         if stop_now:
             if len(metric_list) < len(model_list):  # could have stopped early in randomized gridsearch
@@ -2323,7 +2321,7 @@ def sort_model_by_time(model_list, metric_name):
     return model_metric_list
 
 
-def evaluate_early_stopping(metric_list, stop_round, tolerance, bigger_is_better, reference_val):
+def evaluate_early_stopping(metric_list, stop_round, tolerance, bigger_is_better):
     """
     This function mimics the early stopping function as implemented in ScoreKeeper.java.  Please see the Java file
     comment to see the explanation of how the early stopping works.
@@ -2332,7 +2330,6 @@ def evaluate_early_stopping(metric_list, stop_round, tolerance, bigger_is_better
     :param stop_round:  integer, determine averaging length
     :param tolerance:   real, tolerance to see if the grid search model has improved enough to keep going
     :param bigger_is_better:    bool: True if metric is optimized as it gets bigger and vice versa
-    :param reference_val:   real, equivalent to lastBeforeK in ScoreKeeper.java.
 
     :return:    bool indicating if we should stop early and sorted metric_list
     """
@@ -2341,29 +2338,20 @@ def evaluate_early_stopping(metric_list, stop_round, tolerance, bigger_is_better
     shortest_len = 2*stop_round
 
     bestInLastK = 1.0*sum(metric_list[0:stop_round])/stop_round
-    worstInLastK = 1.0*sum(metric_list[stop_round:shortest_len])/stop_round
-
-    # if metric_list length is 2*stop_round, at the beginning of sort
-    if not(math.isnan(reference_val)) and metric_len == shortest_len:
-        lastBeforeK = worstInLastK
-    else:
-        lastBeforeK = reference_val
-
-    if not(np.sign(bestInLastK) == np.sign(worstInLastK)):
-        return False, bestInLastK
+    lastBeforeK = 1.0*sum(metric_list[stop_round:shortest_len])/stop_round
 
     if not(np.sign(bestInLastK) == np.sign(lastBeforeK)):
-        return False, bestInLastK
+        return False
 
     ratio = bestInLastK/lastBeforeK
 
     if math.isnan(ratio):
-        return False, bestInLastK
+        return False
 
     if bigger_is_better:
-        return (not (ratio > 1+tolerance)), bestInLastK
+        return not (ratio > 1+tolerance)
     else:
-        return (not (ratio < 1-tolerance)), bestInLastK
+        return not (ratio < 1-tolerance)
 
 
 def write_hyper_parameters_json(dir1, dir2, json_filename, hyper_parameters):

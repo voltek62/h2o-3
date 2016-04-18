@@ -62,10 +62,10 @@ test.GLM.Binomial.RandomGrid.Test.SyntheticData <- function() {
   train_row_count = train_col_count * round(runif(1, min_col_count_ratio, max_col_count_ratio))
   
   # for DEBUGGING
-#     train_col_count = 3
-#     train_row_count = 400
-#     max_int_val = 1
-#     max_real_number = 1
+#      train_col_count = 3
+#      train_row_count = 400
+#      max_int_val = 1
+#      max_real_number = 1
   ##### ENd Debugging
 
   # Setup up test, generate trainin data
@@ -230,6 +230,8 @@ test.GLM.Binomial.RandomGrid.Test.SyntheticData <- function() {
   Log.info("************* Test4: Test decreasing stopping metrics logloss:")
   print(search_criteria)  # print out search criteria used
   
+  browser()
+  
   grid_name = paste("myGLMBinomialGrid", as.integer(Sys.time()), sep="_")
   if (runGLMMetricStop(predictor_names, response_name, train_data, family, nfolds, hyper_parameters, search_criteria,
                        TRUE, correct_model_number,grid_name)) {
@@ -247,6 +249,8 @@ test.GLM.Binomial.RandomGrid.Test.SyntheticData <- function() {
   
   Log.info("************* Test5: Test increasing stopping metrics AUC:")
   print(search_criteria)  # print out search criteria used
+  
+  browser()
   
   grid_name = paste("myGLMBinomialGrid", as.integer(Sys.time()), sep="_")
   if (runGLMMetricStop(predictor_names, response_name, train_data, family, nfolds, hyper_parameters, search_criteria,
