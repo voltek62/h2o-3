@@ -571,8 +571,7 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
 
   min_list_len = 2*stop_round
   metric_list = c()
-  stop_now = list(FALSE, 0)
-  reference = 0
+  stop_now = FALSE
 
   # sort model_ids built by time, oldest one first
   sorted_model_metrics = sort_model_metrics_by_time(glm_grid1@model_ids, search_criteria[["stopping_metric"]])
@@ -580,20 +579,18 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
   for (metric_value in sorted_model_metrics) {
     metric_list = c(metric_list, metric_value)
 
-    if (length(metric_list) >= min_list_len) {   # start processing when you have enough models
-      stop_now = evaluate_early_stopping(metric_list, stop_round, tolerance, is_decreasing, reference)
+    if (length(metric_list) > min_list_len) {   # start processing when you have enough models
+      stop_now = evaluate_early_stopping(metric_list, stop_round, tolerance, is_decreasing)
     }
 
-    if (stop_now[[1]]) {
+    if (stop_now) {
       browser()
       if (length(metric_list) < num_models_built) {
         return(FALSE)
       } else {
         return(TRUE)
       }
-    } else {
-      reference = stop_now[[2]]
-    }
+    } 
   }
 
   if (length(metric_list) == possible_model_number) {
@@ -611,11 +608,10 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
 #             stop_round:  integer, determine averaging length
 #             tolerance:   real, tolerance to see if the grid search model has improved enough to stop
 #             is_decreasing:    bool: True if metric is optimized as it gets smaller and vice versa
-#             reference:  real, storing the lastBeforeK value from last comparison.
 #
 # Returns:    bool indicating if we should stop early and sorted metric_list
 #----------------------------------------------------------------------
-evaluate_early_stopping <- function(metric_list, stop_round, tolerance, is_decreasing, reference) {
+evaluate_early_stopping <- function(metric_list, stop_round, tolerance, is_decreasing) {
 
   metric_len = length(metric_list)
   metric_list = sort(metric_list, decreasing=!(is_decreasing))
@@ -623,29 +619,20 @@ evaluate_early_stopping <- function(metric_list, stop_round, tolerance, is_decre
   start_len = 2*stop_round
   
   bestInLastK = mean(metric_list[1:stop_round])
-  worstInLastK = mean(metric_list[(stop_round+1):start_len])
-  
-  if (length(metric_list) == start_len) {
-    lastBeforeK = worstInLastK
-  } else {
-    lastBeforeK = reference
-  }
+  lastBeforeK = mean(metric_list[(stop_round+1):start_len])
 
-  if (!(sign(bestInLastK)) == sign(worstInLastK))
-    return(list(FALSE, bestInLastK))
-  
-  if (!(sign(bestInLastK) == sign(lastBeforeK)))
-    return(list(FALSE, bestInLastK))
+  if (!(sign(bestInLastK)) == sign(lastBeforeK))
+    return(FALSE)
   
   ratio = bestInLastK/lastBeforeK
   
   if (is.nan(ratio))
-    return(list(FALSE, bestInLastK))
+    return(FALSE)
   
   if (is_decreasing)
-    return(list(!(ratio < (1-tolerance)), bestInLastK))
+    return(!(ratio < (1-tolerance)))
   else
-    return(list(!(ratio > (1+tolerance)), bestInLastK))
+    return(!(ratio > (1+tolerance)))
 }
 
 #----------------------------------------------------------------------
