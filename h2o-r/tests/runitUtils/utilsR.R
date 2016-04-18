@@ -584,7 +584,6 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
     }
 
     if (stop_now) {
-      browser()
       if (length(metric_list) < num_models_built) {
         return(FALSE)
       } else {
