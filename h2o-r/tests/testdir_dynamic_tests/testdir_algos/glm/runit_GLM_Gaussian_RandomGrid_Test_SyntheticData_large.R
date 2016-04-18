@@ -185,6 +185,9 @@ test.GLM.Gaussian.RandomGrid.Test.SyntheticData <- function() {
   Log.info("************* Test3: Test max_runtime_secs stopping criteria:")
   print(search_criteria)  # print out search criteria used
   
+  Log.info("Time taken to build one barebone model is ")
+  print(min_time_val)
+  
   grid_name = paste("myGLMGaussianGrid", as.integer(Sys.time()), sep="_")
   # start grid search 
   glm_grid1 = h2o.grid("glm", grid_id=grid_name, x=predictor_names, y=response_name, training_frame=train_data,
