@@ -2332,6 +2332,8 @@ def evaluate_early_stopping(metric_list, stop_round, tolerance, bigger_is_better
     :param stop_round:  integer, determine averaging length
     :param tolerance:   real, tolerance to see if the grid search model has improved enough to keep going
     :param bigger_is_better:    bool: True if metric is optimized as it gets bigger and vice versa
+    :param reference_val:   real, equivalent to lastBeforeK in ScoreKeeper.java.
+
     :return:    bool indicating if we should stop early and sorted metric_list
     """
     metric_len = len(metric_list)
