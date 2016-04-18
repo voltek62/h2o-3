@@ -571,7 +571,8 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
 
   min_list_len = 2*stop_round
   metric_list = c()
-  stop_now = FALSE
+  stop_now = list(FALSE, 0)
+  reference = 0
 
   # sort model_ids built by time, oldest one first
   sorted_model_metrics = sort_model_metrics_by_time(glm_grid1@model_ids, search_criteria[["stopping_metric"]])
@@ -579,18 +580,19 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
   for (metric_value in sorted_model_metrics) {
     metric_list = c(metric_list, metric_value)
 
-    if (length(metric_list) > min_list_len) {   # start processing when you have enough models
-      stop_metric_list = evaluate_early_stopping(metric_list, stop_round, tolerance, is_decreasing)
-      stop_now = stop_metric_list[[1]]
-      metric_list = stop_metric_list[[2]]
+    if (length(metric_list) >= min_list_len) {   # start processing when you have enough models
+      stop_now = evaluate_early_stopping(metric_list, stop_round, tolerance, is_decreasing, reference)
     }
 
-    if (stop_now) {
+    if (stop_now[[1]]) {
+      browser()
       if (length(metric_list) < num_models_built) {
         return(FALSE)
       } else {
         return(TRUE)
       }
+    } else {
+      reference = stop_now[[2]]
     }
   }
 
@@ -609,44 +611,41 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
 #             stop_round:  integer, determine averaging length
 #             tolerance:   real, tolerance to see if the grid search model has improved enough to stop
 #             is_decreasing:    bool: True if metric is optimized as it gets smaller and vice versa
+#             reference:  real, storing the lastBeforeK value from last comparison.
 #
 # Returns:    bool indicating if we should stop early and sorted metric_list
 #----------------------------------------------------------------------
-evaluate_early_stopping <- function(metric_list, stop_round, tolerance, is_decreasing) {
-  metric_list = sort(metric_list, decreasing=is_decreasing)
+evaluate_early_stopping <- function(metric_list, stop_round, tolerance, is_decreasing, reference) {
 
   metric_len = length(metric_list)
-
-  start_index = metric_len - 2*stop_round + 1   # start index for reference, start at 1
-  stop_length = stop_round - 1
-  all_moving_values = c()
-
-  for (index in 0:stop_round) {
-    index_start = start_index + index
-    all_moving_values = c(all_moving_values, sum(metric_list[index_start:(index_start+stop_length)]))
-  }
-
-  if (((min(all_moving_values) > 0) && (max(all_moving_values) > 0)) ||
-      ((min(all_moving_values) < 0) && (max(all_moving_values) < 0))) {
-
-    reference_value = all_moving_values[1]
-    last_value = all_moving_values[length(all_moving_values)]
-
-    if (((reference_value > 0) && (last_value > 0)) || ((reference_value < 0) && (last_value < 0))) {
-      ratio = last_value / reference_value
-
-      if (!(is_decreasing)) {
-        return (list(!(ratio > 1+tolerance), metric_list))
-      } else {
-        return(list(!(ratio < 1-tolerance), metric_list))
-      }
-
-    } else {   # zero in reference metric, or sign of metrics differ, marked as not yet converge
-      return(list(FALSE, metric_list))
-    }
+  metric_list = sort(metric_list, decreasing=!(is_decreasing))
+  
+  start_len = 2*stop_round
+  
+  bestInLastK = mean(metric_list[1:stop_round])
+  worstInLastK = mean(metric_list[(stop_round+1):start_len])
+  
+  if (length(metric_list) == start_len) {
+    lastBeforeK = worstInLastK
   } else {
-    return(list(FALSE, metric_list))
+    lastBeforeK = reference
   }
+
+  if (!(sign(bestInLastK)) == sign(worstInLastK))
+    return(list(FALSE, bestInLastK))
+  
+  if (!(sign(bestInLastK) == sign(lastBeforeK)))
+    return(list(FALSE, bestInLastK))
+  
+  ratio = bestInLastK/lastBeforeK
+  
+  if (is.nan(ratio))
+    return(list(FALSE, bestInLastK))
+  
+  if (is_decreasing)
+    return(list(!(ratio < (1-tolerance)), bestInLastK))
+  else
+    return(list(!(ratio > (1+tolerance)), bestInLastK))
 }
 
 #----------------------------------------------------------------------
