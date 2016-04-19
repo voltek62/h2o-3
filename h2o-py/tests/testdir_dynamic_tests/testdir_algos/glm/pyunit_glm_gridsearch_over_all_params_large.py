@@ -33,7 +33,7 @@ class Test_glm_grid_search:
     not supposed to be specified in both places.
 
     Test Descriptions:
-    test1_gbm_grid_search_over_params: test for condition 1 and performs the following:
+    test_gbm_grid_search_over_params: test for condition 1 and performs the following:
         a. grab all truely griddable parameters and randomly or manually set the parameter values.
         b. Next, build H2O GLM models using grid search.  Count and make sure models
            are only built for hyper-parameters set to legal values.  No model is built for bad hyper-parameters
@@ -109,7 +109,7 @@ class Test_glm_grid_search:
     lambda_scale = 50           # scale the lambda values to be higher than 0 to 1
     alpha_scale = 1.2           # scale alpha into bad ranges
     time_scale = 3              # maximum runtime scale
-    extra_time_fraction = 0.1   # since timing is never perfect, give some extra time on top of maximum runtime limit
+    extra_time_fraction = 0.0   # since timing is never perfect, give some extra time on top of maximum runtime limit
     min_runtime_per_epoch = 0   # minimum run time found.  Determined later
 
     # parameters denoting filenames with absolute paths
@@ -362,7 +362,7 @@ class Test_glm_grid_search:
 
     def test1_glm_grid_search_over_params(self):
         """
-        test1_gbm_grid_search_over_params: test for condition 1 and performs the following:
+        test_gbm_grid_search_over_params: test for condition 1 and performs the following:
         a. grab all truely griddable parameters and randomly or manually set the parameter values.
         b. Next, build H2O GLM models using grid search.  Count and make sure models
            are only built for hyper-parameters set to legal values.  No model is built for bad hyper-parameters
@@ -376,7 +376,7 @@ class Test_glm_grid_search:
         """
 
         print("*******************************************************************************************")
-        print("test1_gbm_grid_search_over_params for GLM " + self.family)
+        print("test_gbm_grid_search_over_params for GLM " + self.family)
 
         h2o.cluster_info()
 
@@ -444,7 +444,7 @@ class Test_glm_grid_search:
                     self.test_failed += 1             # count total number of tests that have failed
                     self.test_failed_array[self.test_num] += 1
 
-                    print("test1_gbm_grid_search_over_params for GLM failed: grid search model and manually "
+                    print("test_gbm_grid_search_over_params for GLM failed: grid search model and manually "
                           "built H2O model differ too much in test MSE!")
                     break
 
@@ -454,24 +454,23 @@ class Test_glm_grid_search:
             if not (self.correct_model_number == self.possible_number_models):  # wrong grid model number
                 self.test_failed += 1
                 self.test_failed_array[self.test_num] = 1
-                print("test1_gbm_grid_search_over_params for GLM failed: number of models built by gridsearch "
+                print("test_gbm_grid_search_over_params for GLM failed: number of models built by gridsearch "
                     "does not equal to all possible combinations of hyper-parameters")
 
             # make sure the max_runtime_secs is working to restrict model built time
-            if not((total_gridsearch_runtime <= total_run_time_limits) and
-                       (manual_run_runtime <= total_run_time_limits)):
+            if manual_run_runtime > total_run_time_limits:
                 self.test_failed += 1
                 self.test_failed_array[self.test_num] = 1
-                print("test1_gbm_grid_search_over_params for GLM failed: number of models built by gridsearch "
+                print("test_gbm_grid_search_over_params for GLM failed: number of models built by gridsearch "
                       "does not equal to all possible combinations of hyper-parameters")
 
             self.test_num += 1
 
             if self.test_failed == 0:
-                print("test1_gbm_grid_search_over_params for GLM has passed!")
+                print("test_gbm_grid_search_over_params for GLM has passed!")
         except:
             if self.possible_number_models > 0:
-                print("test1_gbm_grid_search_over_params for GLM failed: exception was thrown for no reason.")
+                print("test_gbm_grid_search_over_params for GLM failed: exception was thrown for no reason.")
 
     def test2_illegal_name_value(self):
         """
@@ -570,9 +569,18 @@ class Test_glm_grid_search:
 
         # copied from Eric to catch execution run errors and not quit
         try:
-            grid_model = H2OGridSearch(H2OGeneralizedLinearEstimator(**params_dict),
-                                       hyper_params=error_hyper_params)
-            grid_model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data)
+            if "max_runtime_secs" in list(params_dict):     # need to set max_runtime_secs when calling train
+                max_runtime_secs = params_dict["max_runtime_secs"]
+                del params_dict["max_runtime_secs"]
+
+                grid_model = H2OGridSearch(H2OGeneralizedLinearEstimator(**params_dict),
+                                           hyper_params=error_hyper_params)
+                grid_model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data,
+                                 max_runtime_secs=max_runtime_secs)
+            else:
+                grid_model = H2OGridSearch(H2OGeneralizedLinearEstimator(**params_dict),
+                                           hyper_params=error_hyper_params)
+                grid_model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data)
 
             # if error_number = 1, it is okay.  Else it should fail.
             if not (error_number[0] == 1):
