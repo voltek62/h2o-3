@@ -584,8 +584,13 @@ runGLMMetricStop <- function(predictor_names, response_name, train_data, family,
     }
 
     if (stop_now) {
-      browser()
       if (length(metric_list) < num_models_built) {
+        
+        Log.info("number of models built by gridsearch: ")
+        print(num_models_built)
+        Log.info("number of models built proposed by stopping metrics: ")
+        print(length(metric_list))
+        
         return(FALSE)
       } else {
         return(TRUE)
