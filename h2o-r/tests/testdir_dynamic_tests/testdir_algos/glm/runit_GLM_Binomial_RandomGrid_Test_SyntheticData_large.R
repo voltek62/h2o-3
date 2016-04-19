@@ -42,9 +42,9 @@ test.GLM.Binomial.RandomGrid.Test.SyntheticData <- function() {
   min_real_val = 0
   min_time_val = 0  # meaningful lower bound for max_runtime_secs, determined later
   max_real_number = 5
-  time_scale = 1.2  # used to scale up the max_runtime_secs in hyper-parameters
+  time_scale = 1  # used to scale up the max_runtime_secs in hyper-parameters
   model_number_scale = 1
-  max_runtime_scale = 1.5  # used to scale up the max_runtime_secs in search_criteria
+  max_runtime_scale = 1.2  # used to scale up the max_runtime_secs in search_criteria
   
   lambda_scale = 100
   alpha_scale = 1
@@ -62,10 +62,10 @@ test.GLM.Binomial.RandomGrid.Test.SyntheticData <- function() {
   train_row_count = train_col_count * round(runif(1, min_col_count_ratio, max_col_count_ratio))
   
   # for DEBUGGING
-#     train_col_count = 3
-#     train_row_count = 400
-#     max_int_val = 1
-#     max_real_number = 1
+#   train_col_count = 3
+#   train_row_count = 400
+#   max_int_val = 1
+#   max_real_number = 1
   ##### ENd Debugging
 
   # Setup up test, generate trainin data
@@ -189,7 +189,10 @@ test.GLM.Binomial.RandomGrid.Test.SyntheticData <- function() {
   
   Log.info("************* Test3: Test max_runtime_secs stopping criteria:")
   print(search_criteria)  # print out search criteria used
-  
+
+  Log.info("Time taken to build one barebone model is ")
+  print(min_time_val)
+
   grid_name = paste("myGLMBinomialGrid", as.integer(Sys.time()), sep="_")
   # start grid search 
   glm_grid1 = h2o.grid("glm", grid_id=grid_name, x=predictor_names, y=response_name, training_frame=train_data,

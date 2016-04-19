@@ -301,12 +301,10 @@ class Test_glm_random_grid_search:
         else:   # all tests have passed.  Delete sandbox if if was not wiped before
             pyunit_utils.make_Rsandbox_dir(self.current_dir, self.test_name, False)
 
-    def test1_glm_random_grid_search_model_number(self, metric_name):
+    def test1_glm_random_grid_search_model_number(self):
         """
         This test is used to make sure the randomized gridsearch will generate all models specified in the
         hyperparameters if no stopping condition is given in the search criterion.
-
-        :param metric_name: string to denote what grid search model should be sort by
 
         :return: None
         """
@@ -511,7 +509,7 @@ def test_random_grid_search_for_glm():
     # randomize grid search for Binomial
     start_time = time.clock()
     test_glm_binomial_random_grid = Test_glm_random_grid_search("binomial")
-    test_glm_binomial_random_grid.test1_glm_random_grid_search_model_number("logloss(xval=True)")
+    test_glm_binomial_random_grid.test1_glm_random_grid_search_model_number()
     test_glm_binomial_random_grid.test2_glm_random_grid_search_max_model()
     test_glm_binomial_random_grid.test3_glm_random_grid_search_max_runtime_secs()
     test_glm_binomial_random_grid.test4_glm_random_grid_search_metric("logloss", False)
