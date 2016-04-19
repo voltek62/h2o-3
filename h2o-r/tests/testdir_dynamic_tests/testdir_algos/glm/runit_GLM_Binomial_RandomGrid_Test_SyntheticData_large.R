@@ -62,10 +62,10 @@ test.GLM.Binomial.RandomGrid.Test.SyntheticData <- function() {
   train_row_count = train_col_count * round(runif(1, min_col_count_ratio, max_col_count_ratio))
   
   # for DEBUGGING
-      train_col_count = 3
-      train_row_count = 400
-      max_int_val = 1
-      max_real_number = 1
+#   train_col_count = 3
+#   train_row_count = 400
+#   max_int_val = 1
+#   max_real_number = 1
   ##### ENd Debugging
 
   # Setup up test, generate trainin data
