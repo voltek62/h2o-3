@@ -301,6 +301,10 @@ class Test_glm_random_grid_search:
         else:   # all tests have passed.  Delete sandbox if if was not wiped before
             pyunit_utils.make_Rsandbox_dir(self.current_dir, self.test_name, False)
 
+            # remove any csv files left in test directory
+        pyunit_utils.remove_csv_files(self.current_dir, ".csv")
+        pyunit_utils.remove_csv_files(self.current_dir, ".json")
+
     def test1_glm_random_grid_search_model_number(self):
         """
         This test is used to make sure the randomized gridsearch will generate all models specified in the
