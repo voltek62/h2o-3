@@ -129,7 +129,8 @@ class TestGLMBinomial:
     total_test_number = 7   # total number of tests being run for GLM Binomial family
 
     ignored_eps = 1e-15   # if p-values < than this value, no comparison is performed, only for Gaussian
-    allowed_diff = 2e-2   # tolerance of comparison for logloss/prediction accuracy
+    allowed_diff = 5e-2   # tolerance of comparison for logloss/prediction accuracy, okay to be loose.  Condition
+                          # to run the codes are different
 
     duplicate_col_counts = 5    # maximum number of times to duplicate a column
     duplicate_threshold = 0.2   # for each column, a coin is tossed to see if we duplicate that column or not
