@@ -498,6 +498,8 @@ class Test_glm_grid_search:
 
         error_number = np.random.random_integers(0, 3, 1)   # randomly choose an error
 
+        print("Test 2 error_number is {0}".format(error_number[0]))
+
         error_hyper_params = \
             pyunit_utils.insert_error_grid_search(self.hyper_params, self.gridable_parameters, self.gridable_types,
                                                   error_number[0])
@@ -555,7 +557,7 @@ class Test_glm_grid_search:
 
         error_number = np.random.random_integers(0, 2, 1)   # randomly choose an error
 
-        print("error_number is {0}".format(error_number[0]))
+        print("Test 3 error_number is {0}".format(error_number[0]))
 
         params_dict, error_hyper_params = \
             pyunit_utils.generate_redundant_parameters(self.hyper_params, self.gridable_parameters,
