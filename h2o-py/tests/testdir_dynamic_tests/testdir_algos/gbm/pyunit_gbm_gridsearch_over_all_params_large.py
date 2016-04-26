@@ -17,9 +17,6 @@ from random import shuffle
 from h2o.estimators.gbm import H2OGradientBoostingEstimator
 from h2o.grid.grid_search import H2OGridSearch
 
-from h2o.estimators.glm import H2OGeneralizedLinearEstimator
-
-
 class Test_gbm_grid_search:
     """
     PUBDEV-1843: Grid testing.  Subtask 2.
@@ -51,8 +48,8 @@ class Test_gbm_grid_search:
 
     # parameters set by users, change with care
     max_col_count = 4               # set maximum values of train/test row and column counts
-    max_col_count_ratio = 300       # set max row count to be multiples of col_count to avoid over fitting
-    min_col_count_ratio = 100       # set min row count to be multiples of col_count to avoid over fitting
+    max_col_count_ratio = 600       # set max row count to be multiples of col_count to avoid over fitting
+    min_col_count_ratio = 300       # set min row count to be multiples of col_count to avoid over fitting
 
     max_p_value = 2                 # set maximum predictor value
     min_p_value = -2                # set minimum predictor value
@@ -60,24 +57,21 @@ class Test_gbm_grid_search:
     max_w_value = 2                 # set maximum weight value
     min_w_value = -2                # set minimum weight value
 
-    max_class_number = 10           # maximum number of classes allowed
+    max_class_number = 5           # maximum number of classes allowed
 
-    max_grid_model = 20           # maximum number of grid models generated
+    max_grid_model = 10           # maximum number of grid models generated before adding max_runtime_secs
 
     class_number = 2                # number of response class for classification, randomly determined later
 
     curr_time = str(round(time.time()))     # store current timestamp, used as part of filenames.
+    seed = round(time.time())
 
     # parameters denoting filenames of interested that store training/validation/test data sets in csv format
     training1_filename = "gridsearch_training1_"+curr_time+"_set.csv"
-    training2_filename = "gridsearch_training2_"+curr_time+"_set.csv"
-    training3_filename = "gridsearch_training3_"+curr_time+"_set.csv"
-
     json_filename = "gridsearch_hyper_parameter_" + curr_time + ".json"
-
     weight_filename = "gridsearch_"+curr_time+"_weight.csv"
 
-    allowed_diff = 1e-5   # value of p-values difference allowed between theoretical and h2o p-values
+    allowed_diff = 1e-2   # difference allow between grid search model and manually built model MSEs
 
     # System parameters, do not change.  Dire consequences may follow if you do
     current_dir = os.path.dirname(os.path.realpath(sys.argv[1]))    # directory of this test file
@@ -90,25 +84,27 @@ class Test_gbm_grid_search:
 
     # following parameters are used to generate hyper-parameters
     max_int_val = 10            # maximum size of random integer values
-    min_int_val = -10           # minimum size of random integer values
-    max_int_number = 5          # maximum number of integer random grid values to generate
+    min_int_val = -2           # minimum size of random integer values
+    max_int_number = 3          # maximum number of integer random grid values to generate
 
     max_real_val = 1            # maximum size of random float values
-    min_real_val = -1           # minimum size of random float values
-    max_real_number = 5         # maximum number of real grid values to generate
+    min_real_val = -0.1           # minimum size of random float values
+    max_real_number = 3         # maximum number of real grid values to generate
 
-    time_scale = 3              # maximum runtime scale
-    extra_time_fraction = 0.1   # since timing is never perfect, give some extra time on top of maximum runtime limit
-    min_runtime_per_tree = 0   # minimum run time found.  Determined later
+    time_scale = 1.2              # maximum runtime scale
+    extra_time_fraction = 0.0   # since timing is never perfect, give some extra time on top of maximum runtime limit
+    min_runtime_per_tree = 0    # minimum run time found.  Determined later
+    model_run_time = 0.0        # time taken to run a vanilla GBM model.  Determined later.
+    allowed_runtime_diff = 0.05     # run time difference between GBM manually built and gridsearch models before
+                                    # we attempt to compare training metrics.
 
     # parameters denoting filenames with absolute paths
     training1_data_file = os.path.join(current_dir, training1_filename)
-    training2_data_file = os.path.join(current_dir, training2_filename)
-    training3_data_file = os.path.join(current_dir, training3_filename)
     weight_data_file = os.path.join(current_dir, weight_filename)
 
     families = ['gaussian', 'multinomial']    # distribution family to perform grid search over
     family = 'gaussian'     # choose default family to be gaussian
+    training_metric = 'MSE'    # metrics by which we evaluate model performance
 
     test_name = "pyunit_gbm_gridsearch_over_all_params_large.py"     # name of this test
     sandbox_dir = ""  # sandbox directory where we are going to save our failed test data sets
@@ -120,11 +116,7 @@ class Test_gbm_grid_search:
     training1_data = []         # store training data sets
     training2_data = []         # store training data sets
     training3_data = []
-
-    total_test_number = 3       # number of tests carried out
     test_failed = 0             # count total number of tests that have failed
-    test_failed_array = [0]*total_test_number   # denote test results for all tests run.  1 error, 0 pass
-    test_num = 0                # index representing which test is being run
 
     # give the user opportunity to pre-assign hyper parameters for fixed values
     hyper_params = dict()
@@ -144,9 +136,9 @@ class Test_gbm_grid_search:
 
     params_zero_one = ['col_sample_rate', 'learn_rate_annealing', 'learn_rate', 'col_sample_rate_per_tree',
                        'sample_rate']
-    params_more_than_zero = ['min_rows', 'max_depth', 'ntrees', "max_after_balance_size"]
+    params_more_than_zero = ['min_rows', 'max_depth',  "max_after_balance_size"]
     params_more_than_one = ['nbins_cats', 'nbins']
-    params_zero_positive = ['max_runtime_secs', 'stopping_rounds', 'stopping_tolerance']       # >= 0
+    params_zero_positive = ['max_runtime_secs', 'stopping_rounds', 'ntrees', 'stopping_tolerance']       # >= 0
 
     final_hyper_params = dict()     # store the final hyper-parameters that we are going to use
     gridable_parameters = []    # store griddable parameter names
@@ -186,24 +178,26 @@ class Test_gbm_grid_search:
                                                                            self.max_col_count_ratio))
 
         #  DEBUGGING setup_data, remember to comment them out once done.
-        self.train_col_count = 3
-        self.train_row_count = 200
+        # self.train_col_count = 3
+        # self.train_row_count = 200
         # self.max_real_number = 1
         # self.max_int_number = 1
         # end DEBUGGING
 
-        #### This is used to generate dataset for regression or classification.  Nothing to do
-        #### with setting the distribution family in this case
-        # randomly choose which family of GLM algo to use
+        # This is used to generate dataset for regression or classification.  Nothing to do
+        # with setting the distribution family in this case
+        
+        # randomly choose which family of GBM algo to use
         self.family = self.families[random.randint(0, len(self.families)-1)]
 
         # set class number for classification
         if 'multinomial' in self.family:
             self.class_number = random.randint(2, self.max_class_number)    # randomly set number of classes K
+            self.training_metric = 'logloss'
 
         # generate real value weight vector and training/validation/test data sets for GLM
-        pyunit_utils.write_syn_floating_point_dataset_glm(self.training1_data_file, self.training2_data_file,
-                                                          self.training3_data_file, self.weight_data_file,
+        pyunit_utils.write_syn_floating_point_dataset_glm(self.training1_data_file, "",
+                                                          "", self.weight_data_file,
                                                           self.train_row_count, self.train_col_count, 2,
                                                           self.max_p_value, self.min_p_value, self.max_w_value,
                                                           self.min_w_value, self.noise_std, self.family,
@@ -214,8 +208,6 @@ class Test_gbm_grid_search:
 
         # preload data sets
         self.training1_data = h2o.import_file(pyunit_utils.locate(self.training1_data_file))
-        self.training2_data = h2o.import_file(pyunit_utils.locate(self.training2_data_file))
-        self.training3_data = h2o.import_file(pyunit_utils.locate(self.training3_data_file))
 
         # set data set indices for predictors and response
         self.y_index = self.training1_data.ncol-1
@@ -229,11 +221,6 @@ class Test_gbm_grid_search:
             if self.training1_data[self.y_index].nlevels()[0] < self.class_number:
                 print("Response classes are not represented in training dataset.")
                 sys.exit(0)
-
-            self.training2_data[self.y_index] = self.training2_data[self.y_index].round().asfactor()
-            self.training3_data[self.y_index] = self.training2_data[self.y_index].round().asfactor()
-            # self.hyper_params["validation_frame"] = [self.training1_data.frame_id, self.training2_data.frame_id,
-            #                                          self.training3_data.frame_id]
 
         # save the training data files just in case the code crashed.
         pyunit_utils.remove_csv_files(self.current_dir, ".csv", action='copy', new_dir_path=self.sandbox_dir)
@@ -252,19 +239,19 @@ class Test_gbm_grid_search:
         :return: None
         """
         # build bare bone model to get all parameters
-        model = H2OGradientBoostingEstimator(distribution=self.family)
+        model = H2OGradientBoostingEstimator(distribution=self.family, seed=self.seed, nfolds=self.nfolds)
         model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data)
 
-        run_time = pyunit_utils.find_grid_runtime([model])  # find model train time
-        print("Time taken to build a base barebone model is {0}".format(run_time))
+        self.model_run_time = pyunit_utils.find_grid_runtime([model])  # find model train time
+        print("Time taken to build a base barebone model is {0}".format(self.model_run_time))
 
         summary_list = model._model_json["output"]["model_summary"]
         num_trees = summary_list.cell_values[0][summary_list.col_header.index('number_of_trees')]
 
         if num_trees == 0:
-            self.min_runtime_per_tree = run_time
+            self.min_runtime_per_tree = self.model_run_time
         else:
-            self.min_runtime_per_tree = run_time / num_trees
+            self.min_runtime_per_tree = self.model_run_time / num_trees
 
         # grab all gridable parameters and its type
         (self.gridable_parameters, self.gridable_types, self.gridable_defaults) = \
@@ -282,25 +269,21 @@ class Test_gbm_grid_search:
                                          self.max_real_val, self.min_real_val)
 
         # scale the max_runtime_secs parameters
-        time_scale = self.time_scale * run_time
+        time_scale = self.time_scale * self.model_run_time
         if "max_runtime_secs" in list(self.hyper_params):
             self.hyper_params["max_runtime_secs"] = [time_scale * x for x
                                                      in self.hyper_params["max_runtime_secs"]]
 
+        # generate a new final_hyper_params which only takes a subset of all griddable parameters while
+        # hyper_params take all griddable parameters and generate the grid search hyper-parameters
         self.possible_number_models = self.check_and_count_models()
 
-        self.final_hyper_params["max_runtime_secs"] = self.hyper_params["max_runtime_secs"]
-
-        # calculate true possible_number_models and exclude the bad parameters since they will not
-        # result in any models being built
-        # alpha_len = len(self.hyper_params["alpha"])
-        # lambda_len = len(self.hyper_params["lambda"])
-        time_len = len(self.hyper_params["max_runtime_secs"])
-        # len_good_alpha = len([x for x in self.hyper_params["alpha"] if (x >= 0) and (x <= 1)])
-        # len_good_lambda = len([x for x in self.hyper_params["lambda"] if (x >= 0)])
-        len_good_time = len([x for x in self.hyper_params["max_runtime_secs"] if (x >= 0)])
-
-        self.possible_number_models = int(self.possible_number_models*len_good_time/time_len)
+        # must add max_runtime_secs to restrict unit test run time and as a promise to Arno to test for this
+        if ("max_runtime_secs" not in list(self.final_hyper_params)) and \
+                ("max_runtime_secs" in list(self.hyper_params)):
+            self.final_hyper_params["max_runtime_secs"] = self.hyper_params["max_runtime_secs"]
+            len_good_time = len([x for x in self.hyper_params["max_runtime_secs"] if (x >= 0)])
+            self.possible_number_models = self.possible_number_models*len_good_time
 
         # write out the hyper-parameters used into json files.
         pyunit_utils.write_hyper_parameters_json(self.current_dir, self.sandbox_dir, self.json_filename,
@@ -365,8 +348,6 @@ class Test_gbm_grid_search:
 
             with open(json_file,'wb') as test_file:
                 json.dump(self.hyper_params, test_file)
-
-
         else:   # all tests have passed.  Delete sandbox if if was not wiped before
             pyunit_utils.make_Rsandbox_dir(self.current_dir, self.test_name, False)
 
@@ -397,106 +378,118 @@ class Test_gbm_grid_search:
             print("Hyper-parameters used here is {0}".format(self.final_hyper_params))
 
             # start grid search
-            grid_model = H2OGridSearch(H2OGradientBoostingEstimator(nfolds=self.nfolds),
+            grid_model = H2OGridSearch(H2OGradientBoostingEstimator(nfolds=self.nfolds, seed=self.seed),
                                        hyper_params=self.final_hyper_params)
             grid_model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data)
 
             self.correct_model_number = len(grid_model)     # store number of models built
 
-            # check the total time taken to build grid search models
-            total_gridsearch_runtime = pyunit_utils.find_grid_runtime(grid_model)
-
-
-            # add parameters into params_dict.  Use this to manually build model
-            params_dict = dict()
-            params_dict["family"] = self.family
-            params_dict["nfolds"] = self.nfolds
-            total_run_time_limits = 0.0   # calculate upper bound of max_runtime_secs
-            true_run_time_limits = 0.0
-            manual_run_runtime = 0.0
-
-            # compare MSE performance of model built by gridsearch with manually built model
-            for each_model in grid_model:
-
-                # grab parameters used by grid search and build a dict out of it
-                params_list = pyunit_utils.extract_used_params_xval(each_model, self.final_hyper_params.keys(),
-                                                                    params_dict, algo="GBM")
-
-
-
-                # need to taken out max_runtime_secs from model parameters, it is now set in .train()
-                if "max_runtime_secs" in params_list:
-                    max_runtime = params_list["max_runtime_secs"]
-                    del params_list["max_runtime_secs"]
-                else:
-                    max_runtime = 0
-
-                manual_model = H2OGeneralizedLinearEstimator(**params_list)
-                manual_model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data,
-                                   max_runtime_secs=max_runtime)
-
-                # collect the time taken to manually built all models
-                model_runtime = pyunit_utils.find_grid_runtime([manual_model])  # time taken to build this model
-                manual_run_runtime += model_runtime
-
-                summary_list = manual_model._model_json['output']['model_summary']
-                iteration_num = summary_list.cell_values[0][summary_list.col_header.index('number_of_iterations')]
-
-                if max_runtime > 0:
-                    # shortest possible time it takes to build this model
-                    if (max_runtime < self.min_runtime_per_tree) or (iteration_num <= 1):
-                        total_run_time_limits += model_runtime
-                    else:
-                        total_run_time_limits += max_runtime
-
-                true_run_time_limits += max_runtime
-
-                # compute and compare test metrics between the two models
-                test_grid_model_metrics = each_model.model_performance(test_data=self.training2_data)
-                test_manual_model_metrics = manual_model.model_performance(test_data=self.training2_data)
-
-                # just compare the mse in this case within tolerance:
-                if abs(test_grid_model_metrics.mse() - test_manual_model_metrics.mse()) > self.allowed_diff:
-                    self.test_failed += 1             # count total number of tests that have failed
-                    self.test_failed_array[self.test_num] += 1
-                    print("test_gbm_grid_search_over_params for GLM failed: grid search model and manually "
-                          "built H2O model differ too much in test MSE!")
-                    break
-
-            total_run_time_limits = max(total_run_time_limits, true_run_time_limits) * (1+self.extra_time_fraction)
-
             # make sure the correct number of models are built by gridsearch
             if not (self.correct_model_number == self.possible_number_models):  # wrong grid model number
                 self.test_failed += 1
-                self.test_failed_array[self.test_num] = 1
                 print("test_gbm_grid_search_over_params for GLM failed: number of models built by gridsearch "
                       "does not equal to all possible combinations of hyper-parameters")
-            # make sure the max_runtime_secs is working to restrict model built time
-            if not((total_gridsearch_runtime <= total_run_time_limits) and
-                       (manual_run_runtime <= total_run_time_limits)):
-                self.test_failed += 1
-                self.test_failed_array[self.test_num] = 1
-                print("test_gbm_grid_search_over_params for GLM failed: number of models built by gridsearch "
-                      "does not equal to all possible combinations of hyper-parameters")
-            if self.test_failed == 0:
-                print("test_gbm_grid_search_over_params for GLM has passed!")
+            else:
+                # add parameters into params_dict.  Use this to manually build model
+                params_dict = dict()
+                params_dict["distribution"] = self.family
+                params_dict["nfolds"] = self.nfolds
+                params_dict["seed"] = self.seed
+                total_run_time_limits = 0.0   # calculate upper bound of max_runtime_secs
+                true_run_time_limits = 0.0
+                manual_run_runtime = 0.0
+
+                # compare MSE performance of model built by gridsearch with manually built model
+                for each_model in grid_model:
+
+                    params_list = grid_model.get_hyperparams_dict(each_model._id)
+                    params_list.update(params_dict)
+
+                    model_params = dict()
+
+                    # need to taken out max_runtime_secs from model parameters, it is now set in .train()
+                    if "max_runtime_secs" in params_list:
+                        model_params["max_runtime_secs"] = params_list["max_runtime_secs"]
+                        max_runtime = params_list["max_runtime_secs"]
+                        del params_list["max_runtime_secs"]
+                    else:
+                        max_runtime = 0
+
+                    if "r2_stopping" in params_list:
+                        model_params["r2_stopping"] = params_list["r2_stopping"]
+                        del params_list["r2_stopping"]
+
+                    if "validation_frame" in params_list:
+                        model_params["validation_frame"] = params_list["validation_frame"]
+                        del params_list["validation_frame"]
+
+                    if "learn_rate_annealing" in params_list:
+                        model_params["learn_rate_annealing"] = params_list["learn_rate_annealing"]
+                        del params_list["learn_rate_annealing"]
+
+                    # make sure manual model was provided the same max_runtime_secs as the grid model
+                    each_model_runtime = pyunit_utils.find_grid_runtime([each_model])
+
+                    manual_model = H2OGradientBoostingEstimator(**params_list)
+                    manual_model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data,
+                                       **model_params)
+
+                    # collect the time taken to manually built all models
+                    model_runtime = pyunit_utils.find_grid_runtime([manual_model])  # time taken to build this model
+                    manual_run_runtime += model_runtime
+
+                    summary_list = manual_model._model_json['output']['model_summary']
+                    tree_num = summary_list.cell_values[0][summary_list.col_header.index('number_of_trees')]
+
+                    if max_runtime > 0:
+                        # shortest possible time it takes to build this model
+                        if (max_runtime < self.min_runtime_per_tree) or (tree_num <= 1):
+                            total_run_time_limits += model_runtime
+                        else:
+                            total_run_time_limits += max_runtime
+
+                    true_run_time_limits += max_runtime
+
+                    # compute and compare test metrics between the two models
+                    test_grid_model_metrics = each_model.model_performance()._metric_json[self.training_metric]
+                    test_manual_model_metrics = manual_model.model_performance()._metric_json[self.training_metric]
+
+                    # just compare the mse in this case within tolerance:
+                    if (abs(model_runtime - each_model_runtime) < self.allowed_runtime_diff) and \
+                            (abs(test_grid_model_metrics - test_manual_model_metrics) > self.allowed_diff):
+                        self.test_failed += 1             # count total number of tests that have failed
+                        print("test_gbm_grid_search_over_params for GBM failed: grid search model and manually "
+                              "built H2O model differ too much in test MSE!")
+                        break
+
+                total_run_time_limits = max(total_run_time_limits, true_run_time_limits) * (1+self.extra_time_fraction)
+
+                # make sure the max_runtime_secs is working to restrict model built time
+                if not(manual_run_runtime <= total_run_time_limits):
+                    self.test_failed += 1
+                    print("test_gbm_grid_search_over_params for GBM failed: time taken to manually build models is {0}."
+                          "  Maximum allowed time is {1}".format(manual_run_runtime, total_run_time_limits))
+
+                if self.test_failed == 0:
+                    print("test_gbm_grid_search_over_params for GBM has passed!")
         except:
             if self.possible_number_models > 0:
-                print("test_gbm_grid_search_over_params for GLM failed: exception was thrown for no reason.")
+                print("test_gbm_grid_search_over_params for GBM failed: exception was thrown for no reason.")
+                self.test_failed += 1
 
 
 def test_grid_search_for_gbm_over_all_params():
     """
-    Create and instantiate class and perform tests specified for GLM
+    Create and instantiate class and perform tests specified for GBM
 
     :return: None
     """
-    test_glm_grid = Test_gbm_grid_search()
-    test_glm_grid.test_gbm_grid_search_over_params()
+    test_gbm_grid = Test_gbm_grid_search()
+    test_gbm_grid.test_gbm_grid_search_over_params()
 
     sys.stdout.flush()
 
-    if test_glm_grid.test_failed:  # exit with error if any tests have failed
+    if test_gbm_grid.test_failed:  # exit with error if any tests have failed
         sys.exit(1)
 
 
