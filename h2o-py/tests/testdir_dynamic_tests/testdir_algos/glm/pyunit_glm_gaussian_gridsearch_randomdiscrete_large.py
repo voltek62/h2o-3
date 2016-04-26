@@ -81,11 +81,11 @@ class Test_glm_random_grid_search:
 
     max_int_val = 1000          # maximum size of random integer values
     min_int_val = 0             # minimum size of random integer values
-    max_int_number = 5          # maximum number of integer random grid values to generate
+    max_int_number = 4          # maximum number of integer random grid values to generate
 
     max_real_val = 1            # maximum size of random float values
     min_real_val = 0.0          # minimum size of random float values
-    max_real_number = 5         # maximum number of real grid values to generate
+    max_real_number = 4         # maximum number of real grid values to generate
 
     lambda_scale = 100          # scale lambda value to be from 0 to 100 instead of 0 to 1
     max_runtime_scale = 3       # scale the max runtime to be different from 0 to 1
@@ -238,7 +238,7 @@ class Test_glm_random_grid_search:
         :return: None
         """
         # build bare bone model to get all parameters
-        model = H2OGeneralizedLinearEstimator(family=self.family)
+        model = H2OGeneralizedLinearEstimator(family=self.family, nfolds=self.nfolds)
         model.train(x=self.x_indices, y=self.y_index, training_frame=self.training1_data)
 
         self.one_model_time = pyunit_utils.find_grid_runtime([model])  # find model train time
@@ -484,7 +484,7 @@ class Test_glm_random_grid_search:
         print("GLM Gaussian grid search_criteria: {0}".format(search_criteria))
 
         # add max_runtime_secs back into hyper-parameters to limit model runtime.
-        self.hyper_params["max_runtime_secs"] = [0.1]   # arbitrarily set to 0.1 second
+        self.hyper_params["max_runtime_secs"] = [0.3]   # arbitrarily set to 0.1 second
 
         # fire off random grid-search
         grid_model = \
