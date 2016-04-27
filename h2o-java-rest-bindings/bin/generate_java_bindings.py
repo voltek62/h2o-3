@@ -593,4 +593,3 @@ for entity, proxy in retrofitProxies.items():
         for line in proxy:
             the_file.write("%s\n" % line)
 
-
