@@ -359,11 +359,11 @@ class Test_gbm_grid_search:
         """
         test_gbm_grid_search_over_params: test for condition 1 and performs the following:
         a. grab all truely griddable parameters and randomly or manually set the parameter values.
-        b. Next, build H2O GLM models using grid search.  Count and make sure models
+        b. Next, build H2O GBM models using grid search.  Count and make sure models
            are only built for hyper-parameters set to legal values.  No model is built for bad hyper-parameters
            values.  We should instead get a warning/error message printed out.
         c. For each model built using grid search, we will extract the parameters used in building
-           that model and manually build a H2O GLM model.  MSEs are calculated from a test set
+           that model and manually build a H2O GBM model.  MSEs are calculated from a test set
            to compare the performance of grid search model and our manually built model.  If their MSEs
            are close, declare test success.  Otherwise, declare test failure.
         d. we will check and make sure the models are built within the max_runtime_secs time limit that was set
@@ -371,7 +371,7 @@ class Test_gbm_grid_search:
         """
 
         print("*******************************************************************************************")
-        print("test_gbm_grid_search_over_params for GLM " + self.family)
+        print("test_gbm_grid_search_over_params for GBM " + self.family)
         h2o.cluster_info()
 
         try:
@@ -387,7 +387,7 @@ class Test_gbm_grid_search:
             # make sure the correct number of models are built by gridsearch
             if not (self.correct_model_number == self.possible_number_models):  # wrong grid model number
                 self.test_failed += 1
-                print("test_gbm_grid_search_over_params for GLM failed: number of models built by gridsearch "
+                print("test_gbm_grid_search_over_params for GBM failed: number of models built by gridsearch "
                       "does not equal to all possible combinations of hyper-parameters")
             else:
                 # add parameters into params_dict.  Use this to manually build model
