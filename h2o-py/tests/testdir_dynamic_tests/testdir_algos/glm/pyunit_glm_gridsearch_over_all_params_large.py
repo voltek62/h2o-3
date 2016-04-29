@@ -78,8 +78,8 @@ class Test_glm_grid_search:
     curr_time = str(round(time.time()))     # store current timestamp, used as part of filenames.
 
     # parameters denoting filenames of interested that store training/validation/test data sets in csv format
-    training1_filename = "gridsearch_training1_"+curr_time+"_set.csv"
-    training2_filename = "gridsearch_training2_"+curr_time+"_set.csv"
+    training1_filename = "gridsearch_glm_training1_"+curr_time+"_set.csv"
+    training2_filename = "gridsearch_glm_training2_"+curr_time+"_set.csv"
 
     json_filename = "gridsearch_hyper_parameter_" + curr_time + ".json"
     json_filename_bad = "gridsearch_hyper_parameter_bad_" + curr_time + ".json"

@@ -60,8 +60,8 @@ class Test_glm_random_grid_search:
     curr_time = str(round(time.time()))
 
     # parameters denoting filenames of interested that store training/validation/test data sets in csv format
-    training1_filename = "gridsearch_training1_"+curr_time+"_set.csv"
-    json_filename = "gridsearch_hyper_parameter_" + curr_time + ".json"
+    training1_filename = "random_gridsearch_GLM_binomial_training1_"+curr_time+"_set.csv"
+    json_filename = "random_gridsearch_GLM_binomial_hyper_parameter_" + curr_time + ".json"
 
     weight_filename = "gridsearch_"+curr_time+"_weight.csv"
 
